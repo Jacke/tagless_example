@@ -10,6 +10,7 @@ import app.model._
 import app.util.Marshallable
 import com.google.common.io.BaseEncoding
 import io.circe.syntax._
+import io.circe.Json
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.auto._
 import NewsOps._
@@ -101,8 +102,8 @@ class NewsRoute[F[_]: Marshallable: Clock] private (
           vcn <- cn.validateTransform(g2f)
           _ <- F.ensure(ns.createNews(vcn, "uname"))(
             CannotModifyTableException(s"Create -> uname, $vcn"))(_ == 1)
-        } yield StatusCodes.OK
-        complete(query)
+        } yield HandlerModel[Json](vcn.asJson, 200, "news-created")
+        complete(query.map(_.asJson))
         //}
       }
     }

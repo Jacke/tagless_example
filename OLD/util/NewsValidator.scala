@@ -67,11 +67,13 @@ object NewsValidator {
 
   implicit class ValidatorOps[H[_]](private val ops: NewsOps[H])
       extends AnyVal {
-    def validateTransform[F[_],G[_]: Par: FunctorRaise[?[_], Errors]: 
-                                     Sync: Clock: ApplicativeAsk[?[_], AppConfig]]
-                                     (f2g: G ~> F)(implicit G: NewsValidator[G],
-                        T: Traverse[H],
-                        S: Semigroupal[H]): F[NewsOps[H]] =
+    def validateTransform[
+        F[_],
+        G[_]: Par: FunctorRaise[?[_], Errors]: Sync: Clock: ApplicativeAsk[
+          ?[_],
+          AppConfig]](f2g: G ~> F)(implicit G: NewsValidator[G],
+                                   T: Traverse[H],
+                                   S: Semigroupal[H]): F[NewsOps[H]] =
       Kleisli(G.validate[H]).mapK(f2g).run(ops)
   }
 

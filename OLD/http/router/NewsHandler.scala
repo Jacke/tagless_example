@@ -20,8 +20,7 @@ abstract class NewsHandler[F[_]: Marshallable](
       extractUri { uri =>
         val error = for {
           _ <- log.error(x)(s"ERROR => Endpoint: $uri")
-          ehm <- F.pure(
-            ErrorHandlerModel[None.type](None, 400, "invalid-news-id"))
+          ehm <- F.pure(HandlerModel[None.type](None, 400, "invalid-news-id"))
         } yield ehm
         complete(error.map(StatusCodes.BadRequest -> _.asJson))
       }
@@ -32,7 +31,7 @@ abstract class NewsHandler[F[_]: Marshallable](
         val error = for {
           _ <- log.error(x)(s"ERROR => Endpoint: $uri")
           ehm <- F.pure(
-            ErrorHandlerModel[None.type](None, 400, "invalid-login-header"))
+            HandlerModel[None.type](None, 400, "invalid-login-header"))
         } yield ehm
         complete(error.map(StatusCodes.BadRequest -> _.asJson))
       }
@@ -41,8 +40,7 @@ abstract class NewsHandler[F[_]: Marshallable](
       extractUri { uri =>
         val error = for {
           _ <- log.error(x)(s"ERROR => Endpoint: $uri")
-          ehm <- F.pure(
-            ErrorHandlerModel[String](a, 400, "news-does-not-exists"))
+          ehm <- F.pure(HandlerModel[String](a, 400, "news-does-not-exists"))
         } yield ehm
         complete(error.map(StatusCodes.BadRequest -> _.asJson))
       }
@@ -51,8 +49,7 @@ abstract class NewsHandler[F[_]: Marshallable](
       extractUri { uri =>
         val error = for {
           _ <- log.error(x)(s"ERROR => Endpoint: $uri")
-          ehm <- F.pure(
-            ErrorHandlerModel[None.type](None, 500, "something-wrong"))
+          ehm <- F.pure(HandlerModel[None.type](None, 500, "something-wrong"))
         } yield ehm
         complete(error.map(StatusCodes.InternalServerError -> _.asJson))
       }
@@ -62,8 +59,7 @@ abstract class NewsHandler[F[_]: Marshallable](
         val error = for {
           _ <- log.error(x)(
             s"ERROR => Endpoint: $uri \n Caused by: \n${a.mkString("\n")}")
-          ehm <- F.pure(
-            ErrorHandlerModel[List[String]](a, 400, "validation-error"))
+          ehm <- F.pure(HandlerModel[List[String]](a, 400, "validation-error"))
         } yield ehm
         complete(error.map(StatusCodes.BadRequest -> _.asJson))
       }
@@ -75,8 +71,7 @@ abstract class NewsHandler[F[_]: Marshallable](
       extractUri { uri =>
         val error = for {
           _ <- log.error(x)(s"ERROR => Endpoint: $uri \n")
-          ehm <- F.pure(
-            ErrorHandlerModel[None.type](None, 500, "something-wrong"))
+          ehm <- F.pure(HandlerModel[None.type](None, 500, "something-wrong"))
         } yield ehm
         complete(error.map(StatusCodes.InternalServerError -> _.asJson))
       }
@@ -90,7 +85,7 @@ abstract class NewsHandler[F[_]: Marshallable](
           val error = for {
             _ <- log.error(s"ERROR => Endpoint: $uri \nMissing login header\n")
             ehm <- F.pure(
-              ErrorHandlerModel[None.type](None, 400, "missing-login-header"))
+              HandlerModel[None.type](None, 400, "missing-login-header"))
           } yield ehm
           complete(error.map(StatusCodes.BadRequest -> _.asJson))
         }
@@ -98,7 +93,7 @@ abstract class NewsHandler[F[_]: Marshallable](
     .handle {
       case akka.http.scaladsl.server.RequestEntityExpectedRejection =>
         complete(
-          StatusCodes.BadRequest -> ErrorHandlerModel[None.type](
+          StatusCodes.BadRequest -> HandlerModel[None.type](
             None,
             400,
             "missing-query-param").asJson)
@@ -113,7 +108,7 @@ abstract class NewsHandler[F[_]: Marshallable](
           val error = for {
             _ <- log.error(
               s"ERROR => Endpoint: $uri \n ${msg} ${a.getClass.getCanonicalName}\n")
-            ehm <- F.pure(ErrorHandlerModel[None.type](None, 500, "msg"))
+            ehm <- F.pure(HandlerModel[None.type](None, 500, msg))
           } yield ehm
           complete(error.map(StatusCodes.InternalServerError -> _.asJson))
         }

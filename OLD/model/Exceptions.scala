@@ -52,7 +52,7 @@ object ValidatorErrorsException {
 }
 
 @JsonCodec
-case class ErrorHandlerModel[A](body: A, status: Int, reason: String)
+case class HandlerModel[A](body: A, status: Int, reason: String)
 
 package object error {
   type Nec[+A] = NonEmptyChain[A]

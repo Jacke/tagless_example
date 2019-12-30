@@ -13,9 +13,12 @@ import scala.concurrent.Await
 import com.typesafe.conductr.bundlelib.scala.{Env, StatusService}
 import com.typesafe.conductr.lib.scala.ConnectionContext
 import doobie.hikari.HikariTransactor
+import doobie.util.{ExecutionContexts}
+import doobie.util.transactor.Transactor
 import io.chrisdavenport.log4cats.SelfAwareStructuredLogger
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import cats.effect._
+import cats._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 object Main extends IOApp {
@@ -42,12 +45,21 @@ object Main extends IOApp {
     }(s => F.delay(s.terminate()))
 
   private def transactor[F[_]](config: DbConfig)(
-      implicit F: Async[F]): F[HikariTransactor[F]] = {
+      implicit F: Async[F],
+      S: ContextShift[F]): Resource[F, HikariTransactor[F]] = {
     import doobie.hikari._
-    HikariTransactor.newHikariTransactor[F](config.driverClassName,
-                                            config.url,
-                                            config.user,
-                                            config.pass)
+    for {
+      te <- ExecutionContexts.cachedThreadPool[F]
+      xa <- HikariTransactor.newHikariTransactor[F](
+        config.driverClassName,
+        config.url,
+        config.user,
+        config.pass,
+        ExecutionContexts.synchronous,
+        te
+      )
+    } yield xa
+
   }
 
   private def migrate[F[_]](
@@ -92,21 +104,48 @@ object Main extends IOApp {
       nr <- NewsRoute.create(ns, cfg)
     } yield RestApi.create(nr, vr)
 
+  private def errorResource[F[_]: MonadError[?[_], Throwable]](num: Int)(
+      implicit E: MonadError[F, Throwable],
+      F: Effect[F]): Resource[F, Int] = {
+
+    Resource.make {
+      for {
+        system <- E.fromTry(scala.util.Try(1 / num)) //F.delay(F.pure(()))
+      } yield system
+      /*
+        err.handleErrorWith { error =>
+          println(error)
+          errorResource(1)
+        }
+     */
+    }(s => F.pure(s))
+  }
+
+  private def resourcesForProgram[F[_]](
+      log: SelfAwareStructuredLogger[F],
+      cfg: AppConfig)(implicit F: Effect[F], cs: ContextShift[F]) =
+    for {
+      system <- actorSystemResource(log)
+      tr <- transactor(cfg.db)
+      err <- errorResource(0)
+    } yield (system, tr, err)
+
   private def program[F[_]: Marshallable: Clock](
-      implicit F: Effect[F]): F[ExitCode] =
+      implicit F: Effect[F],
+      cs: ContextShift[F]): F[ExitCode] =
     for {
       log <- Slf4jLogger.create[F]
-      code <- actorSystemResource(log).use { system =>
-        for {
-          cfg <- AppConfig.load
-          _ <- migrate(cfg, log)
-          tr <- transactor(cfg.db)
-          api <- restApi(tr, cfg)
-          _ <- akkaApp(cfg, api, log, system)
-          _ <- log.info(
-            s"News service online at: ${cfg.http.host}:${cfg.http.port}")
-          _ <- F.never[ExitCode]
-        } yield ExitCode.Success
+      cfg <- AppConfig.load
+      code <- resourcesForProgram(log, cfg).use {
+        case (system, tr, err) =>
+          for {
+            _ <- migrate(cfg, log)
+            api <- restApi(tr, cfg)
+            _ <- akkaApp(cfg, api, log, system)
+            _ <- log.info(
+              s"News service online at: ${cfg.http.host}:${cfg.http.port}")
+            _ <- F.never[ExitCode]
+          } yield ExitCode.Success
       }
     } yield code
 

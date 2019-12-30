@@ -9,6 +9,7 @@ import cats.effect.{Async, Clock, Effect, Sync}
 import doobie.util.transactor.Transactor
 import cats.syntax.flatMap._
 import cats.syntax.functor._
+import cats.effect._
 import doobie.hikari.HikariTransactor
 case class TestInitializer[F[_] : Marshallable : Effect, G[_]] private (
   cfg: AppConfig,
@@ -18,9 +19,21 @@ case class TestInitializer[F[_] : Marshallable : Effect, G[_]] private (
 
 object TestInitializer {
 
-  private def transactor[F[_]](config: DbConfig)(implicit F: Async[F]): F[HikariTransactor[F]] = {
+  private def transactor[F[_]](config: DbConfig)(implicit F: Async[F], shift: ContextShift[F]): Resource[F, HikariTransactor[F]] = {
     import doobie.hikari._
-    HikariTransactor.newHikariTransactor[F](config.driverClassName, config.url, config.user, config.pass)
+    import doobie.util.{ExecutionContexts}
+
+    for {
+      be <- Blocker[F]    // our blocking EC
+      xa <- HikariTransactor.newHikariTransactor[F](
+        config.driverClassName,
+        config.url,
+        config.user,
+        config.pass,
+        ExecutionContexts.synchronous,
+        be
+      )
+    } yield xa
   }
 
   private def restApi[F[_] : Marshallable : Clock](tr: HikariTransactor[F], cfg: AppConfig)(
@@ -32,10 +45,13 @@ object TestInitializer {
       nr <- NewsRoute.create(ns, cfg)
     } yield RestApi.create(nr, vr)
 
-  def init[F[_] : Marshallable : Effect : Clock] =
+  def init[F[_] : Marshallable : Effect : Clock : ContextShift] =
     for {
       cfg <- AppConfig.load
-      tr <- transactor(cfg.db)
-      rApi <- restApi(tr, cfg)
-    } yield TestInitializer(cfg, tr, rApi)
+      app <- transactor(cfg.db).use { case (tr) =>
+        for {
+          rApi <- restApi(tr, cfg)
+        } yield TestInitializer(cfg, tr, rApi)
+      }
+    } yield app
 }

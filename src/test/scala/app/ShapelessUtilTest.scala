@@ -7,9 +7,13 @@ import cats.Id
 import cats.effect.IO
 import doobie.util.fragment.Fragment
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import cats.effect._
+import scala.concurrent.ExecutionContext
+
 
 class ShapelessUtilTest extends WordSpec with Matchers with ScalatestRouteTest with BeforeAndAfterAll {
   implicit val clock = IO.timer(system.dispatcher).clock
+  implicit val contextShift: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
   private val initializer = TestInitializer.init[IO].unsafeRunSync()
 
   override def afterAll: Unit =

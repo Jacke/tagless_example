@@ -76,6 +76,7 @@ resolvers += Resolver.bintrayRepo("hmrc", "releases")
 
 // libraryDependencies += "uk.gov.hmrc" %% "emailaddress" % "3.4.0"
 
+libraryDependencies += "com.typesafe.akka" %% "akka-testkit" % "2.6.1" % Test
 
 resolvers ++= Seq(
   Resolver.typesafeIvyRepo("releases"),

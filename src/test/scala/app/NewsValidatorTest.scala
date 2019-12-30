@@ -23,9 +23,13 @@ import cats.temp.par.Par._
 import cats.mtl.instances.readert._
 import cats.mtl.instances.local._
 import cats.mtl.instances.handle._
+import cats.effect._
+import scala.concurrent.ExecutionContext
 
 class NewsValidatorTest extends WordSpec with Matchers with ScalatestRouteTest with BeforeAndAfterAll {
   implicit val clock = IO.timer(system.dispatcher).clock
+  implicit val contextShift: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
+
   private val init = TestInitializer.init[IO].unsafeRunSync()
 
   private val validatorInstance = NewsValidator.apply[Errors, ReaderT[EitherT[IO, Errors, ?], AppConfig, ?]]

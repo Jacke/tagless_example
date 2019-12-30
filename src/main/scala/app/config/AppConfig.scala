@@ -2,8 +2,10 @@ package app.config
 
 import AppConfig._
 import cats.effect.Sync
-import pureconfig.{CamelCase, ConfigFieldMapping, ProductHint}
+import pureconfig.{CamelCase, ConfigFieldMapping}
 import pureconfig.module.catseffect._
+import pureconfig.generic.ProductHint
+import pureconfig.generic.auto._
 
 case class AppConfig(
     db: DbConfig,

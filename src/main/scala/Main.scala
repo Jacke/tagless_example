@@ -10,8 +10,8 @@ import app.util.{DefaultFlyway, Marshallable}
 
 import scala.concurrent.duration._
 import scala.concurrent.Await
-import com.typesafe.conductr.bundlelib.scala.{Env, StatusService}
-import com.typesafe.conductr.lib.scala.ConnectionContext
+//import com.typesafe.conductr.bundlelib.scala.{Env, StatusService}
+//import com.typesafe.conductr.lib.scala.ConnectionContext
 import doobie.hikari.HikariTransactor
 import doobie.util.{ExecutionContexts}
 import doobie.util.transactor.Transactor
@@ -50,13 +50,14 @@ object Main extends IOApp {
     import doobie.hikari._
     for {
       te <- ExecutionContexts.cachedThreadPool[F]
+      be <- Blocker[F]    // our blocking EC
       xa <- HikariTransactor.newHikariTransactor[F](
         config.driverClassName,
         config.url,
         config.user,
         config.pass,
         ExecutionContexts.synchronous,
-        te
+        be
       )
     } yield xa
 
@@ -79,7 +80,6 @@ object Main extends IOApp {
   )(implicit F: Sync[F]): F[Unit] =
     F.delay {
       implicit val system: ActorSystem = s
-      implicit val materializer: ActorMaterializer = ActorMaterializer()
       val bFuture =
         Http().bindAndHandle(restApi.route, config.http.host, config.http.port)
       bFuture.failed.foreach { ex =>
@@ -87,12 +87,12 @@ object Main extends IOApp {
           s"Failed to bind to ${config.http.host} : ${config.http.port}")
       }(system.dispatcher)
 
-      StatusService
-        .signalStartedOrExit()(ConnectionContext(system.dispatcher))
-        .foreach { _ =>
-          if (Env.isRunByConductR) log.debug("Signalled start to ConductR")
-          else log.debug("Cannot signalled start to ConductR")
-        }(system.dispatcher)
+      //StatusService
+       // .signalStartedOrExit()(ConnectionContext(system.dispatcher))
+       // .foreach { _ =>
+       //   if (Env.isRunByConductR) log.debug("Signalled start to ConductR")
+       //   else log.debug("Cannot signalled start to ConductR")
+       // }(system.dispatcher)
     }
 
   private def restApi[F[_]: Marshallable: Clock](
@@ -110,7 +110,7 @@ object Main extends IOApp {
 
     Resource.make {
       for {
-        system <- E.fromTry(scala.util.Try(1 / num)) //F.delay(F.pure(()))
+        system <- E.fromTry(scala.util.Try(1 / 2)) //F.delay(F.pure(()))
       } yield system
       /*
         err.handleErrorWith { error =>

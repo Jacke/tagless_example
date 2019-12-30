@@ -92,11 +92,12 @@ scalacOptions ++= List(
 //  "-Xlint:nullary-unit",
 //  "-Ywarn-nullary-unit",
 //    "-Xlog-implicits",
+"-Ymacro-annotations",
 //  "-Ypartial-unification",
   "-language:higherKinds"
 )
 
-addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.10.3")
+addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.0" cross CrossVersion.full)
 
 trapExit := false
 // scalafmtOnCompile in ThisBuild := true

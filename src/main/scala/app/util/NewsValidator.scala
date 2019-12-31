@@ -13,13 +13,14 @@ import cats.syntax.either._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.parallel._
-import cats.temp.par.Par
 import cats.{Monad, Semigroupal, Traverse, ~>}
 import cats.effect.Clock
+import cats.data._
+import cats.Parallel
 
 import scala.Function.tupled
 import scala.concurrent.duration.DAYS
-abstract class NewsValidator[F[_]: Monad](implicit P: Par[F]) {
+abstract class NewsValidator[F[_]: Monad: Parallel] {
 
   def title(x: String): F[String]
   def greeting(x: String): F[String]
@@ -31,7 +32,6 @@ abstract class NewsValidator[F[_]: Monad](implicit P: Par[F]) {
   def inns(x: List[String]): F[List[String]]
 
   def validate[G[_]: Traverse: Semigroupal](ops: NewsOps[G]): F[NewsOps[G]] = {
-    import cats.temp.par._
     val ttl = ops.title.parTraverse(title)
     val gtg = ops.greeting.parTraverse(greeting)
     val ctx = ops.contentText.parTraverse(contentText)
@@ -59,7 +59,7 @@ abstract class NewsValidator[F[_]: Monad](implicit P: Par[F]) {
 }
 object NewsValidator {
   def apply[E,
-            F[_]: Par: FunctorRaise[?[_], E]: Sync: Clock: ApplicativeAsk[
+            F[_]: Parallel: FunctorRaise[?[_], E]: Sync: Clock: ApplicativeAsk[
               ?[_],
               AppConfig]](
       implicit V: NewsValidator[F]
@@ -69,7 +69,7 @@ object NewsValidator {
       extends AnyVal {
     def validateTransform[
         F[_],
-        G[_]: Par: FunctorRaise[?[_], Errors]: Sync: Clock: ApplicativeAsk[
+        G[_]: Parallel: FunctorRaise[?[_], Errors]: Sync: Clock: ApplicativeAsk[
           ?[_],
           AppConfig]](f2g: G ~> F)(implicit G: NewsValidator[G],
                                    T: Traverse[H],
@@ -77,14 +77,13 @@ object NewsValidator {
       Kleisli(G.validate[H]).mapK(f2g).run(ops)
   }
 
-  implicit def newsOpsInstance[F[_]: Par](
+  implicit def newsOpsInstance[F[_]: Parallel](
       implicit F: FunctorRaise[F, Errors],
       S: Sync[F],
       clock: Clock[F],
       A: ApplicativeAsk[F, AppConfig]
   ): NewsValidator[F] =
     new NewsValidator[F]() {
-      import cats.temp.par._
 
       override def title(x: String): F[String] =
         lengthCheck(x, 255, "title-max-length-is-exceeded")

@@ -6,27 +6,26 @@ scalaVersion := "2.13.1"
 organization := "com.spread0x"
 name := "example-entries"
 projectVersion := "1.0.0"
+//, JavaAppPackaging)
 
-// enablePlugins(BuildInfoPlugin, JavaAppPackaging)
+enablePlugins(BuildInfoPlugin)
+buildNumber := sys.props.getOrElse("BUILD_NUMBER", "1")
+version := s"${projectVersion.value}.${buildNumber.value}"
+buildBranch := sys.props.getOrElse("BRANCH", "unknown")
+ buildInfoKeys := Seq[BuildInfoKey](
+   name,
+   version,
+   buildBranch,
+   buildTime,
+   "title" ->"Example admin service.",
+   "description" -> "Example admin service."
+ )
+ buildInfoOptions += BuildInfoOption.ToJson
+ buildInfoPackage := "buildInfo"
+ buildTime := ZonedDateTime.now()
 
-
-//  buildNumber := sys.props.getOrElse("BUILD_NUMBER", "1")
-// version := s"${projectVersion.value}.${buildNumber.value}"
-//buildBranch := sys.props.getOrElse("BRANCH", "unknown")
-// buildInfoKeys := Seq[BuildInfoKey](
-//   name,
-//   version,
-//   buildBranch,
-//   buildTime,
-//   "title" ->"Example admin service.",
-//   "description" -> "Example admin service."
-// )
-// buildInfoOptions += BuildInfoOption.ToJson
-// buildInfoPackage := "buildInfo"
-// buildTime := ZonedDateTime.now()
-
-version := "1.1.0"
-logLevel := Level.Debug
+version := "2.0.0"
+// logLevel := Level.Debug
 
 libraryDependencies ++= Seq(
   "org.typelevel" %% "cats-laws" % "2.0.0", //or `cats-testkit` if you are using ScalaTest
@@ -88,12 +87,12 @@ resolvers ++= Seq(
 scalacOptions ++= List(
   "-deprecation",
   "-feature",
-//  "-Xfatal-warnings",
+  "-Xfatal-warnings",
 //  "-Xlint",
 //  "-Xlint:nullary-unit",
 //  "-Ywarn-nullary-unit",
 //    "-Xlog-implicits",
-"-Ymacro-annotations",
+  "-Ymacro-annotations",
 //  "-Ypartial-unification",
   "-language:higherKinds"
 )

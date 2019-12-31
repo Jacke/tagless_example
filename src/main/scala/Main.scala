@@ -104,7 +104,8 @@ object Main extends IOApp {
       nr <- NewsRoute.create(ns, cfg)
     } yield RestApi.create(nr, vr)
 
-  private def errorResource[F[_]: MonadError[?[_], Throwable]](num: Int)(
+// private def errorResource[F[_]: MonadError[?[_], Throwable]](num: Int)(  
+  private def errorResource[F[_]](num: Int)(
       implicit E: MonadError[F, Throwable],
       F: Effect[F]): Resource[F, Int] = {
 
@@ -118,7 +119,9 @@ object Main extends IOApp {
           errorResource(1)
         }
      */
-    }(s => F.pure(s))
+    }({case ending => 
+      F.pure(())
+    })
   }
 
   private def resourcesForProgram[F[_]](

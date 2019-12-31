@@ -42,8 +42,8 @@ class NewsRoute[F[_]: Marshallable: Clock] private (
 
   import app.util.Marshallable.marshaller
 
-  private val g2f: ReaderT[EitherT[F, Errors, ?], AppConfig, ?] ~> F = {
-    λ[ReaderT[EitherT[F, Errors, ?], AppConfig, ?] ~> F](
+  private val g2f: ReaderT[EitherT[F, Errors, *], AppConfig, *] ~> F = {
+    λ[ReaderT[EitherT[F, Errors, *], AppConfig, *] ~> F](
       _.run(cfg).valueOrF(err =>
         F.raiseError(ValidatorErrorsException(err.toNonEmptyList)))
     )
@@ -81,7 +81,7 @@ class NewsRoute[F[_]: Marshallable: Clock] private (
     }
 
   private val uuidParameters =
-    parameter('newsId).map { x =>
+    parameter(Symbol("newsId")).map { x =>
       F.catchNonFatal(UUID.fromString(x)).adaptError {
         case _: IllegalArgumentException =>
           BadLoginException("Unexpected x-forwarded-* header.")
